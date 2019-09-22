@@ -1,0 +1,369 @@
+#+TITLE: MECH 366 Homework 1
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+import SchemDraw as schem
+import SchemDraw.elements as e
+#+END_SRC
+* 
+Consider 2-DOF mass-spring-damper system in the figure below, where
+$k$ $[\si{\newton/\meter}]$ is the linear spring constant,
+$b_1$ $[\si{\newton\second/\meter}]$ and $b_2$ $[\si{\newton\second/\meter}]$ are viscous friction coefficients (between masses and ground),
+and $b_3$ $[\si{\newton\second/\meter}]$ is the damping coefficient.
+$f$ $[\si{\newton}]$ is the force input and the outputs are displacements $y_1$ $[\si{\meter}]$ and $y_1$ $[\si{\meter}]$.
+
+#+ATTR_LATEX: :width 3in
+[[file:q1.png]]
+
+The outputs $y_1$ and $y_2$ are defined by the equations:
+\begin{align}
+m_1 \ddot{y}_1 &= f - k(y_1 - y_2) - b_1\dot{y}_1 - b_3(\dot{y}_1 - \dot{y}_2) \label{y1} \\
+m_2 \ddot{y}_2 &= -k(y_2 - y_1) - b_2\dot{y}_2 - b_3(\dot{y}_2 - \dot{y}_1) \label{y2}
+\end{align}
+** 
+By selecting the following states, obtain the state-space model
+*** $x_1 = y_1, x_2 = \dot{y}_1, x_3 = y_2, x_4 = \dot{y}_2$ label:qb-state
+
+We can rewrite equations (\ref{y1}) and (\ref{y2}) as:
+\begin{align}
+\dot{x}_2 &= \frac{1}{m_1}(u - k(x_1 - x_3) - b_1 x_2 - b_3(x_2 - x_4)) \\
+\dot{x}_4 &= \frac{1}{m_2}(-k(x_3 - x_1) - b_2 x_4 - b_3(x_4 - x_2))
+\end{align}
+
+Now we can define our state-space model:
+\begin{equation*}
+\dot{\mathbf{x}}
+=
+\begin{bmatrix}
+    \dot{x}_1 \\ \dot{x}_2 \\ \dot{x}_3 \\ \dot{x}_4
+\end{bmatrix}
+=
+\begin{bmatrix}
+    0 & 1 & 0 & 0 \\
+    -\frac{k}{m_1} & -\frac{b_1 + b_3}{m_1} & \frac{k}{m_1} & \frac{b_3}{m_1} \\
+    0 & 0 & 0 & 1 \\
+    \frac{k}{m_2} & \frac{b_3}{m_2} & -\frac{k}{m_2} & -\frac{b_2 + b_3}{m_2}
+\end{bmatrix}
+\begin{bmatrix}
+    x_1 \\ x_2 \\ x_3 \\ x_4
+\end{bmatrix}
++
+\begin{bmatrix}
+    0 \\ \frac{1}{m_1} \\ 0 \\ 0
+\end{bmatrix}
+u
+\end{equation*}
+
+We can also define our output matrix:
+\begin{equation*}
+\mathbf{y} =
+\begin{bmatrix}
+    y_1 \\ y_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+    1 & 0 & 0 & 0 \\
+    0 & 0 & 1 & 0
+\end{bmatrix}
+\mathbf{x}
+\end{equation*}
+*** $x_1 = \dot{y}_2, x_2 = y_2, x_3 = \dot{y}_1, x_4 = y_1$
+We can rewrite equations (\ref{y1}) and (\ref{y2}) as:
+\begin{align}
+\dot{x}_3 &= \frac{1}{m_1}(u - k(x_4 - x_2) - b_1 x_3 - b_3(x_3 - x_1)) \\
+\dot{x}_1 &= \frac{1}{m_2}(-k(x_2 - x_4) - b_2 x_1 - b_3(x_1 - x_3))
+\end{align}
+
+Now we can define our state-space model:
+\begin{equation*}
+\dot{\mathbf{x}}
+=
+\begin{bmatrix}
+    \dot{x}_1 \\ \dot{x}_2 \\ \dot{x}_3 \\ \dot{x}_4
+\end{bmatrix}
+=
+\begin{bmatrix}
+    -\frac{b_2 + b_3}{m_2} & -\frac{k}{m_2} & \frac{b_3}{m_2} & \frac{k}{m_2} \\
+    1 & 0 & 0 & 0 \\
+    \frac{b_3}{m_1} & \frac{k}{m_1} & -\frac{b_1 + b_3}{m_1} & -\frac{k}{m_1} \\
+    0 & 0 & 1 & 0
+\end{bmatrix}
+\begin{bmatrix}
+    x_1 \\ x_2 \\ x_3 \\ x_4
+\end{bmatrix}
++
+\begin{bmatrix}
+    0 \\ 0 \\ \frac{1}{m_1} \\ 0
+\end{bmatrix}
+u
+\end{equation*}
+
+We can also define our output matrix:
+\begin{equation*}
+\mathbf{y} =
+\begin{bmatrix}
+    y_1 \\ y_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+    0 & 0 & 0 & 1 \\
+    0 & 1 & 0 & 0
+\end{bmatrix}
+\mathbf{x}
+\end{equation*}
+** 
+(In this question, use the states in \ref{qb-state})
+Instead of the linear spring, we assume the nonlinear spring which has the force-displacement relation of the spring as $f_z = k_1z + k_2 z^3$ (instead of the relation $f_z = kz$ for the linear spring, where $f_z$ is the force and $z$ is the displacement.
+Obtain the linearized state-space model for the equilibrium point
+$y_{10} = 0 [\text{m}]$,
+$y_{20} = 0 [\text{m}]$ and
+$\dot{y}_{10} = \dot{y}_20 = 0 [\text{m/s}]$
+Also, explain the reason why the linearzation around
+$\dot{y}_{10} = 1 [\text{m}]$,
+$\dot{y}_{20} = 0 [\text{m}]$ and 
+$\dot{y}_{10} = \dot{y}_{20} = 0 [\text{m/s}]$
+is impossible.
+
+Let's rewrite the equations (\ref{y1}) and (\ref{y2}) to fit this non-linear spring:
+
+\begin{align}
+m_1 \ddot{y}_1 &= f - f_z(y_1 - y_2) - b_1\dot{y}_1 - b_3(\dot{y}_1 - \dot{y}_2) \label{y1_2} \\
+m_2 \ddot{y}_2 &= -f_z(y_2 - y_1) - b_2\dot{y}_2 - b_3(\dot{y}_2 - \dot{y}_1) \label{y2_2}
+\end{align}
+
+*** Finding the linearized state-space model
+We can rewrite equations (\ref{y1_2}) and (\ref{y2_2}) with our state variables:
+\begin{align}
+\dot{x}_2 &= \frac{1}{m_1}(u - f_z(x_1 - x_3) - b_1 x_2 - b_3(x_2 - x_4)) \\
+\dot{x}_4 &= \frac{1}{m_2}(-f_z(x_3 - x_1) - b_2 x_4 - b_3(x_4 - x_2))
+\end{align}
+
+With this, we can define our non-linear state-space model:
+
+\begin{equation*}
+\dot{\mathbf{x}}
+=
+\begin{bmatrix}
+    x_2 \\
+    \frac{1}{m_1}(u - f_z(x_1 - x_3) - b_1 x_2 - b_3(x_2 - x_4)) \\
+    x_4 \\
+    \frac{1}{m_2}(-f_z(x_3 - x_1) - b_2 x_4 - b_3(x_4 - x_2))
+\end{bmatrix}
+\end{equation*}
+
+First, let's find our Jacobian matrices:
+
+\begin{align*}
+\mathbf{J}_{\dot{\mathbf{x}}} &= \frac{\partial \mathbf{f}}{\partial \dot{\mathbf{x}}} \\
+&=
+\begin{bmatrix}
+    0 & 1 & 0 & 0 \\
+    -\frac{k_1 + 3k_2(x_1 - x_3)^2}{m_1} &
+    -\frac{b_1 + b_3}{m_1} &
+    \frac{k_1 + 3k_2(x_1 - x_3)^2}{m_1} &
+    \frac{b_3}{m_1} \\
+    0 & 0 & 0 & 1 \\
+    \frac{k_1 + 3k_2(x_1 - x_3)^2}{m_1} &
+    \frac{b_3}{m_1} &
+    -\frac{k_1 + 3k_2(x_1 - x_3)^2}{m_1} &
+    -\frac{b_2 + b_3}{m_1} \\
+\end{bmatrix} \\
+\\
+\mathbf{J}_\mathbf{u} &= \frac{\partial \mathbf{f}}{\partial \mathbf{u}} \\
+&= 
+\begin{bmatrix}
+    0 \\ \frac{1}{m_1} \\ 0 \\ 0
+\end{bmatrix}
+\end{align*}
+
+We can find the equilibrium input $u_0$ by subbing $\mathbf{x}_0$ into $\dot{\mathbf{x}}$
+
+\begin{align*}
+\dot{\mathbf{x}}
+&=
+\begin{bmatrix}
+    x_2 \\
+    \frac{1}{m_1}(u_0 - f_z(0) - b_1 \cdot (0) - b_3 \cdot (0)) \\
+    x_4 \\
+    \frac{1}{m_2}(-f_z(0) - b_2 \cdot (0) - b_3(0))
+\end{bmatrix}
+= 0 \\
+\\
+u_0 &= 0
+\end{align*}
+
+We can now find the linearized state space model matrices:
+\begin{align*}
+\mathbf{A} &= \left.\mathbf{J}_{\dot{\mathbf{x}}}\right|_{(\mathbf{x}_0, u_0)} \\
+&=
+\begin{bmatrix}
+    0 & 1 & 0 & 0 \\
+    -\frac{k_1}{m_1} &
+    -\frac{b_1 + b_3}{m_1} &
+    \frac{k_1}{m_1} &
+    \frac{b_3}{m_1} \\
+    0 & 0 & 0 & 1 \\
+    \frac{k_1}{m_1} &
+    \frac{b_3}{m_1} &
+    -\frac{k_1}{m_1} &
+    -\frac{b_2 + b_3}{m_1} \\
+\end{bmatrix} \\
+\\
+\mathbf{B} &= \left.\mathbf{J}_{\mathbf{u}}\right|_{(\mathbf{x}_0, u_0)} \\
+&= 
+\begin{bmatrix}
+    0 \\ \frac{1}{m_1} \\ 0 \\ 0
+\end{bmatrix} \\
+\\
+\mathbf{C} &= 
+\begin{bmatrix}
+    0 & 0 & 0 & 1 \\
+    0 & 1 & 0 & 0
+\end{bmatrix}
+\end{align*}
+
+Our linearized state space model is now defined as:
+\begin{align*}
+\delta \dot{\mathbf{x}} &= \mathbf{A}\delta\mathbf{x} + \mathbf{B}u \\
+\delta \dot{\mathbf{y}} &= \mathbf{C}\delta\mathbf{x} \\
+\end{align*}
+*** Impossibility of $\dot{y}_{10} = 1$
+Because $\dot{x}_4$ does not contain a $u$ term and does not evaluate to $0$ for the given conditions, $\dot{\mathbf{x}}$ can never equal 0.
+
+
+
+
+* 
+Obtain a state-space model for the RLC circuit depicted below.
+Here, the system has two input voltages $u_1$ and $u_2$ [V] and one output voltage [V] across the rightmost capacitor, as indicated in the figure.
+$R$, $L$ and $C$ are some given constants.
+(Hint: You may have some lengthy calculations.)
+
+#+ATTR_LATEX: :width 5in
+[[file:q2.png]]
+First let's redraw the circuit with node names and current directions:
+#+BEGIN_SRC ipython :session :results raw drawer :exports results
+d = schem.Drawing()
+
+d.add(e.SOURCE, d='up', label=['-', '$u_1$', '+'])
+R1 = d.add(e.RES, d='right', label='$R/2$')
+d.labelI(R1, top=False)
+d.add(e.DOT, label='$1$')
+R2 = d.add(e.RES, d='right', label='$R$')
+d.labelI(R2, top=False)
+d.add(e.DOT, label='$2$')
+R3 = d.add(e.RES, d='right', label='$R$')
+d.labelI(R3, top=False)
+d.add(e.DOT, label='$3$')
+R4 = d.add(e.RES, d='right', label='$R/2$')
+d.labelI(R4, top=False)
+d.add(e.SOURCE, d='down', label=['+', '$u_2$', '-'])
+
+d.add(e.LINE, d='left')
+d.push()
+C1 = d.add(e.CAP2, reverse=True, d='up', label='$C$')
+d.labelI(C1, top=False)
+d.pop()
+d.add(e.LINE, d='left')
+d.push()
+L1 = d.add(e.INDUCTOR, d='up', label='$L$')
+d.labelI(L1, top=False)
+d.pop()
+d.add(e.LINE, d='left')
+d.push()
+C2 = d.add(e.CAP2, reverse=True, d='up', label='$C$')
+d.labelI(C2, top=False)
+d.pop()
+d.add(e.LINE, d='left')
+
+d.draw()
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[54]:
+[[file:./obipy-resources/n9ibEa.svg]]
+:END:
+
+We can now define KCL equations for each node:
+\begin{align}
+\text{Node 1}&: \frac{u_1 - V_1}{R/2} + C\dot{V}_1 - \frac{V_1 - V_2}{R} = 0 \\
+\text{Node 2}&: \frac{V_1 - V_2}{R} + \frac{1}{L}\int{V_2 dt} - \frac{V_2 - V_3}{R} = 0 \label{node_2_0} \\
+\text{Node 3}&: \frac{V_2 - V_3}{R} + C\dot{V}_3 - \frac{V_3 - u_2}{R/2} = 0
+\end{align}
+
+For the sake of brevity let's define $v_2 = \int{V_2 dt}$ such that the equations can be rewritten as:
+\begin{align}
+\text{Node 1}&: \frac{u_1 - V_1}{R/2} + C\dot{V}_1 - \frac{V_1 - \dot{v}_2}{R} = 0 \\
+\text{Node 2}&: \frac{V_1 - \dot{v}_2}{R} + \frac{v_2}{L} - \frac{\dot{v}_2 - V_3}{R} = 0 \label{node_2_0} \\
+\text{Node 3}&: \frac{\dot{v}_2 - V_3}{R} + C\dot{V}_3 - \frac{V_3 - u_2}{R/2} = 0
+\end{align}
+
+We can now choose our state variables $x_1 = V_1, x_2 = v_2, x_3 = V_3$ and rewrite our KCL equations in terms of them:
+\begin{align}
+\text{Node 1}&: \frac{u_1 - x_1}{R/2} + C\dot{x}_1 - \frac{x_1 - \dot{x}_2}{R} = 0 \\
+\text{Node 2}&: \frac{x_1 - \dot{x}_2}{R} + \frac{x_2}{L} - \frac{\dot{x}_2 - x_3}{R} = 0 \\
+\text{Node 3}&: \frac{\dot{x}_2 - x_3}{R} + C\dot{x}_3 - \frac{x_3 - u_2}{R/2} = 0
+\end{align}
+
+Let's also isolate our equations for $\dot{\mathbf{x}}$
+\begin{align}
+\dot{x}_1 &= \frac{1}{C}\left(-\frac{u_1 - x_1}{R/2} + \frac{x_1 - \dot{x}_2}{R} \right)\\
+\dot{x}_2 &= \frac{R}{2}\left(\frac{x_1}{R} + \frac{x_2}{L} + \frac{x_3}{R} \right)\\
+\dot{x}_3 &= \frac{1}{C}\left(-\frac{\dot{x}_2 - x_3}{R} + \frac{x_3 - u_2}{R/2} \right)
+\end{align}
+
+Since $\dot{x}_1$ and $\dot{x}_3$ still contain $\dot{x}_2$ terms, let's expand them out.
+
+\begin{align}
+\dot{x}_1 &= \frac{1}{C}\left(-\frac{u_1 - x_1}{R/2} + \frac{x_1}{R} - \frac{1}{2}\left(\frac{x_1}{R} + \frac{x_2}{L} + \frac{x_3}{R} \right)\right)\\
+\dot{x}_2 &= \frac{R}{2}\left(\frac{x_1}{R} + \frac{x_2}{L} + \frac{x_3}{R} \right)\\
+\dot{x}_3 &= \frac{1}{C}\left(-\frac{1}{2}\left(\frac{x_1}{R} + \frac{x_2}{L} + \frac{x_3}{R} \right) + \frac{x_3}{R} + \frac{x_3 - u_2}{R/2} \right)
+\end{align}
+
+Let's simplify these equations
+\begin{align}
+\dot{x}_1 &= \frac{5}{2RC}x_1 - \frac{1}{2LC}x_2 - \frac{1}{2RC}x_3 - \frac{2}{RC}u_1 \\
+\dot{x}_2 &= \frac{1}{2}x_1 + \frac{R}{2L}x_2 + \frac{1}{2}x_3 \\
+\dot{x}_3 &= -\frac{1}{2RC}x_1 - \frac{1}{2LC}x_2 + \frac{5}{2RC}x_3 - \frac{2}{RC}u_2
+\end{align}
+
+We can now define our state-space model:
+\renewcommand\arraystretch{1.5}
+\begin{equation*}
+\dot{\mathbf{x}} =
+\begin{bmatrix}
+    \frac{5}{2RC} & -\frac{1}{2LC} & -\frac{1}{2RC} \\
+    \frac{1}{2} & \frac{R}{2L} & \frac{1}{2}\\
+    -\frac{1}{2RC} & -\frac{1}{2LC} & \frac{5}{2RC}
+\end{bmatrix}
+\begin{bmatrix}
+    x_1 \\ x_2 \\ x_3
+\end{bmatrix}
++
+\begin{bmatrix}
+    \frac{1}{2RC} & 0 \\
+    0 & 0 \\
+    0 & \frac{1}{2RC}
+\end{bmatrix}
+\begin{bmatrix}
+    u_1 \\ u_2
+\end{bmatrix}
+\end{equation*}
+
+We can also define our output:
+\begin{equation*}
+y =
+\begin{bmatrix}
+    0 & 0 & 1
+\end{bmatrix}
+\mathbf{x}
+\end{equation*}
+
+    
+
+
