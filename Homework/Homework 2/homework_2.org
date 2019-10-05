@@ -1,0 +1,250 @@
+#+TITLE: MECH 366 Homework 2
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+import SchemDraw as schem
+import SchemDraw.elements as e
+from sympy import *
+#+END_SRC
+Consider the inverted pendulum system below.
+Here, the input is the
+force $u [\si{\newton}]$ and the two outputs are the position of the cart $z [\si{\meter}]$
+and the pendulum angular position $\theta [\si{\radian}]$.
+Other parameters are shown in the figure and below.
+
+#+ATTR_LATEX: :width 2.4in
+[[file:system.png]]
+
+\begin{align*}
+\ell [\si{\meter}] &: \text{length of the pendulum} \\
+m [\si{\kilo\gram}] &: \text{mass lumped at the top of the pendulum} \\
+M [\si{\kilo\gram}] &: \text{mass of the cart}
+\end{align*}
+
+The equations of motion for this system can be derived as follows:
+\begin{align}
+(M + m)\ddot{z} + (m\ell\cos{\theta})\ddot{\theta} &=
+u + m\ell\left(\dot{\theta}\right)^2\sin{\theta} \label{eq:mass} \\
+(\cos{\theta})\ddot{z} + (\ell)\ddot{\theta} &= g\sin{\theta} \label{eq:theta}
+\end{align}
+
+To answer the following questions, use the equations of motion above.
+
+* 
+By defining the states as
+\begin{equation*}
+x_1 := z,
+x_2 := \dot{z},
+x_3 := \theta,
+x_4 := \dot{\theta}
+\end{equation*}
+obtain the nonlinear state-space model.
+
+Let's rewrite equations ref:eq:mass and ref:eq:theta using our state variables:
+\begin{align}
+(M + m)\dot{x}_2 + (m\ell\cos{x_3})\dot{x_4} &=
+u + m\ell\left(x_4\right)^2\sin{x_3} \label{eq:massx} \\
+(\cos{x_3})\dot{x_2} + (\ell)\dot{x_4} &= g\sin{x_3} \label{eq:thetax}
+\end{align}
+
+In order to isolate for $\dot{x}_2$ and $\dot{x}_4$, let's rewrite equations ref:eq:massx and ref:eq:thetax in matrix form:
+\begin{equation}
+\underbrace{
+    \begin{bmatrix}
+        M + m & m\ell\cos{x_3} \\
+        \cos{x_3} & \ell
+    \end{bmatrix}
+}_{\mathbf{Q}}
+\underbrace{
+    \begin{bmatrix}
+        \dot{x}_2 \\ \dot{x}_4
+    \end{bmatrix}
+}_{\mathbf{r}}
+= 
+\underbrace{
+    \begin{bmatrix}
+        u + m\ell x_4^2 \sin{x_3} \\
+        g \sin{x_3}
+    \end{bmatrix}
+}_{\mathbf{W}}
+\end{equation}
+
+Next let's solve for $\mathbf{r}$
+
+#+BEGIN_SRC ipython :session :results raw drawer :exports none
+
+M, m, l, g= symbols('M m \ell g')
+u = symbols('u')
+x1, x2, x3, x4 = symbols('x_1 x_2 x_3 x_4')
+x1d, x2d, x3d, x4d = symbols(
+    '\dot{x}_1 \dot{x}_2 \dot{x}_3 \dot{x}_4')
+x = Matrix([
+            [x1],
+            [x2],
+            [x3],
+            [x4]
+            ])
+
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+    
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[187]:
+:END:
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+Q = Matrix([
+            [M+m, m*l*cos(x3)],
+            [cos(x3), l]
+            ])
+W = Matrix([
+            [u + m*l*x4**2*sin(x3)],
+            [g*sin(x3)]
+            ])
+r = simplify(Q.inv() * W)
+
+print_var(r, '\\mathbf{r}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{r}=\left[\begin{matrix}\frac{1}{M + m \sin^{2}{\left (x_{3} \right )}} \left(\ell m x_{4}^{2} \sin{\left (x_{3} \right )} - \frac{g m}{2} \sin{\left (2 x_{3} \right )} + u\right)\\\frac{1}{\ell \left(M + m \sin^{2}{\left (x_{3} \right )}\right)} \left(g \left(M + m\right) \sin{\left (x_{3} \right )} - \left(\ell m x_{4}^{2} \sin{\left (x_{3} \right )} + u\right) \cos{\left (x_{3} \right )}\right)\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+We can now write our non-linear state space model:
+#+BEGIN_SRC ipython :session :results output latex :exports both
+xd = Matrix([
+             [x2],
+             [r[0]],
+             [x4],
+             [r[1]]
+             ])
+
+print_var(xd, '\\dot{\\mathbf{x}}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\mathbf{x}}=\left[\begin{matrix}x_{2}\\\frac{1}{M + m \sin^{2}{\left (x_{3} \right )}} \left(\ell m x_{4}^{2} \sin{\left (x_{3} \right )} - \frac{g m}{2} \sin{\left (2 x_{3} \right )} + u\right)\\x_{4}\\\frac{1}{\ell \left(M + m \sin^{2}{\left (x_{3} \right )}\right)} \left(g \left(M + m\right) \sin{\left (x_{3} \right )} - \left(\ell m x_{4}^{2} \sin{\left (x_{3} \right )} + u\right) \cos{\left (x_{3} \right )}\right)\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+We can also write our output vector:
+#+BEGIN_SRC ipython :session :results output latex :exports both
+y = Matrix([
+             [x1],
+             [x3]
+             ])
+
+print_var(y, '\\mathbf{y}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{y}=\left[\begin{matrix}x_{1}\\x_{3}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+* 
+For an operating point
+\begin{equation*}
+\mathbf{x}_0 :=
+\begin{bmatrix}
+    z_0 \\ 0 \\ 0 \\ 0
+\end{bmatrix}
+\end{equation*}
+where $z_0$ is a constant displacement, derive a linearized state-space model.
+
+First, let's calculate our Jacobian matrices:
+#+BEGIN_SRC ipython :session :results output latex :exports both
+J_xd = simplify(xd.jacobian(Matrix([[x1], [x2], [x3], [x4]])))
+
+print_var(J_xd, '\\mathbf{J}_{\\dot{\\mathbf{x}}}', scale_width=True)
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\resizebox{\textwidth}{!}{$\mathbf{J}_{\dot{\mathbf{x}}}=\left[\begin{matrix}0 & 1 & 0 & 0\\0 & 0 & \frac{m}{\left(M + m \sin^{2}{\left (x_{3} \right )}\right)^{2}} \left(M \ell x_{4}^{2} \cos{\left (x_{3} \right )} - M g \cos{\left (2 x_{3} \right )} - \frac{\ell m}{4} x_{4}^{2} \cos{\left (x_{3} \right )} + \frac{\ell m}{4} x_{4}^{2} \cos{\left (3 x_{3} \right )} - \frac{g m}{2} \cos{\left (2 x_{3} \right )} + \frac{g m}{2} - u \sin{\left (2 x_{3} \right )}\right) & \frac{2 \ell m x_{4} \sin{\left (x_{3} \right )}}{M + m \sin^{2}{\left (x_{3} \right )}}\\0 & 0 & 0 & 1\\0 & 0 & \frac{1}{\ell \left(M + m \sin^{2}{\left (x_{3} \right )}\right)^{2}} \left(M^{2} g \cos{\left (x_{3} \right )} + 2 M \ell m x_{4}^{2} \sin^{2}{\left (x_{3} \right )} - M \ell m x_{4}^{2} + M g m \cos^{3}{\left (x_{3} \right )} + M u \sin{\left (x_{3} \right )} + \ell m^{2} x_{4}^{2} \sin^{2}{\left (x_{3} \right )} + g m^{2} \cos^{3}{\left (x_{3} \right )} - g m^{2} \cos{\left (x_{3} \right )} - m u \sin^{3}{\left (x_{3} \right )} + 2 m u \sin{\left (x_{3} \right )}\right) & - \frac{2 m x_{4} \sin{\left (2 x_{3} \right )}}{2 M - m \cos{\left (2 x_{3} \right )} + m}\end{matrix}\right]$}\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+J_u = xd.jacobian(Matrix([u]))
+
+print_var(J_u, '\\mathbf{J}_{\\mathbf{u}}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{J}_{\mathbf{u}}=\left[\begin{matrix}0\\\frac{1}{M + m \sin^{2}{\left (x_{3} \right )}}\\0\\- \frac{\cos{\left (x_{3} \right )}}{\ell \left(M + m \sin^{2}{\left (x_{3} \right )}\right)}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+Next, let's find the equilibrium input $u_0$ by subbing in $\mathbf{x}_0$
+#+BEGIN_SRC ipython :session :results output latex :exports both
+z0 = symbols('z_0')
+x0 = Matrix([z0, 0, 0, 0])
+xd2 = xd[1] # input u only shows up inside this equation
+xd2 = xd2.subs([(s, v) for s, v in zip(x, x0)])
+u_0 = solve(xd2, u)
+
+print_var(u_0, '\\mathbf{u}_0')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{u}_0=\left [ 0\right ]\end{equation*}
+#+END_EXPORT
+
+We can now find the linearized state space model matrices:
+#+BEGIN_SRC ipython :session :results output latex :exports both
+A = J_xd.subs([(s, v) for s, v in zip(x, x0)])
+A = A.subs(u, u_0)
+print_var(A, '\\mathbf{A}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{A}=\left[\begin{matrix}0 & 1 & 0 & 0\\0 & 0 & - \frac{g m}{M} & 0\\0 & 0 & 0 & 1\\0 & 0 & \frac{1}{M^{2} \ell} \left(M^{2} g + M g m\right) & 0\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+B = J_u.subs([(s, v) for s, v in zip(x, x0)])
+B = B.subs(u, u_0)
+print_var(B, '\\mathbf{B}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{B}=\left[\begin{matrix}0\\\frac{1}{M}\\0\\- \frac{1}{M \ell}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+C = Matrix([
+            [1, 0, 0, 0],
+            [0, 0, 1, 0]
+            ])
+print_var(C, '\\mathbf{C}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{C}=\left[\begin{matrix}1 & 0 & 0 & 0\\0 & 0 & 1 & 0\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+Our linearized state space model is now defined as:
+\begin{align*}
+\delta \dot{\mathbf{x}} &= \mathbf{A}\delta\mathbf{x} + \mathbf{Bu} \\
+\delta \mathbf{y} &= \mathbf{C}\delta\mathbf{x} \\
+\end{align*}
+
