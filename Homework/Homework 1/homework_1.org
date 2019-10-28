@@ -228,9 +228,9 @@ We can now find the linearized state space model matrices:
 Our linearized state space model is now defined as:
 \begin{align*}
 \delta \dot{\mathbf{x}} &= \mathbf{A}\delta\mathbf{x} + \mathbf{B}u \\
-\delta \dot{\mathbf{y}} &= \mathbf{C}\delta\mathbf{x} \\
+\delta \mathbf{y} &= \mathbf{C}\delta\mathbf{x} \\
 \end{align*}
-*** Impossibility of $\dot{y}_{10} = 1$
+*** Impossibility of $y_{10} = 1$
 Because $\dot{x}_4$ does not contain a $u$ term and does not evaluate to $0$ for the given conditions, $\dot{\mathbf{x}}$ can never equal 0.
 
 
@@ -346,9 +346,9 @@ We can now define our state-space model:
 \end{bmatrix}
 +
 \begin{bmatrix}
-    \frac{1}{2RC} & 0 \\
+    -\frac{1}{2RC} & 0 \\
     0 & 0 \\
-    0 & \frac{1}{2RC}
+    0 & -\frac{1}{2RC}
 \end{bmatrix}
 \begin{bmatrix}
     u_1 \\ u_2
