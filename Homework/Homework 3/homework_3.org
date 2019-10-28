@@ -1,0 +1,384 @@
+#+TITLE: MECH 366 Homework 3
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \sisetup{per-mode=symbol}
+#+LATEX_HEADER: \sisetup{inter-unit-product=\cdot}
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+from sympy import *
+import networkx as nx
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+    
+#+END_SRC
+
+For the gear-train system depicted below derive the state equation by using the linear graph
+(output equation is not necessary).
+The notations are explained in the following table.
+Masses of the flexible shafts are assumed to be negligible.
+The input is the motor torque $T$ [\si{\newton\meter}].
+
+#+ATTR_LATEX: :align c c l
+| Notation              | Unit                                   | Meaning                               |
+|-----------------------+----------------------------------------+---------------------------------------|
+| $J_m$                 | [\si{\kilo\gram\meter\squared}]        | Moment of inertia of the motor        |
+| $J_L$                 | [\si{\kilo\gram\meter\squared}]        | Moment of inertia of the load         |
+| $J_\ell, J_r$         | [\si{\kilo\gram\meter\squared}]        | Lumped moment of inertia of the gears |
+| $k_i, i = 1, 2, 3$    | [\si{\newton\meter\per\radian}]        | Torsional spring constants            |
+| $N_i, i = 1, 2, 3, 4$ | [-]                                    | The number of gear teeth              |
+| $b$                   | [\si{\newton\meter\per\radian\second}] | The number of gear teeth              |
+
+#+ATTR_LATEX: :width 0.8\textwidth
+[[file:q1.png]]
+
+* Linear Graph
+#+BEGIN_SRC dot :file lingraph.svg :cmdline -Kdot -Tsvg :exports none
+digraph g {
+        node [shape=circle]
+        overlap=false;
+        splines=true;
+        {
+            rank=same;
+            m_k1 [label="A"];
+            k1_N1 [label="B"];
+            l_k2 [label="C"];
+            k2_r [label="D"];
+            N4_k3 [label="E"];
+            k3_L [label="F"];
+        }
+subgraph cluster_N1_N2 {
+            graph[style=dotted];
+            {
+                rank=same;
+                N1 [shape=none, width=0, height=0];
+                N2 [shape=none, width=0, height=0];
+            }
+            N1 -> N2 [style=invis, tailport=e, headport=w, constraint=false]
+        }
+        N1 -> N2 [style=invis]
+        subgraph cluster_N3_N4 {
+            graph[style=dotted];
+            {
+                rank=same;
+                N3 [shape=none, width=0, height=0];
+                N4 [shape=none, width=0, height=0];
+            }
+            N3 -> N4 [style=invis, tailport=e, headport=w, constraint=false]
+        }
+
+        {
+            rank=sink;
+            gnd [label="GND", shape=box, width=10];
+        }
+        
+        gnd -> m_k1 [label="T", style="bold"]
+        m_k1 -> gnd [label="J_m", style="dashed"]
+        m_k1 -> k1_N1 [label="k_1"]
+        k1_N1 -> N1 [arrowhead=none]
+        N1 -> gnd
+
+        l_k2 -> N2 [arrowhead=none]
+        N2 -> gnd
+        l_k2 -> gnd [label="J_\ell", style="dashed"]
+        l_k2 -> k2_r [label="k_2"]
+        k2_r -> gnd [label="J_r", style="dashed"]
+        k2_r -> N3 [arrowhead=none]
+        N3 -> gnd
+
+        N4_k3 -> N4 [arrowhead=none]
+        N4 -> gnd
+        N4_k3 -> k3_L
+        k3_L -> gnd [label="J_L", style="dashed"]
+        k3_L -> gnd [label="b"]
+
+}
+#+END_SRC
+
+[[file:linear_graph.svg]]
+
+* State Variables
+From the linear graph, we get our state variables:
+\begin{equation*}
+\mathbf{x} = 
+\begin{bmatrix}
+x_1 \\ x_2 \\ x_3 \\ x_4 \\ x_5 \\ x_6 \\ x_7
+\end{bmatrix}
+:=
+\begin{bmatrix}
+T_1 \\ \omega_m \\ T_2 \\ \omega_\ell \\ \omega_r \\ T_3 \\ \omega_L
+\end{bmatrix}
+\end{equation*}
+
+* Constitutive Equations
+We can now write out our constitutive equations:
+First let's start by defining our symbols
+#+BEGIN_SRC ipython :session :results raw drawer :exports code
+s = ["",
+     1, 2, 3,
+     "m", "\ell", "r", "L", "b",
+     "{N_1}", "{N_2}", "{N_3}", "{N_4}"
+     ]
+idx_s = ["",
+     1, 2, 3,
+     "m", "l", "r", "L", "b",
+     "N1", "N2", "N3", "N4"
+     ]
+_omega = symbols(
+    " ".join([f"\\omega_{n}" if n else "\\omega" for n in s]))
+_omegad = symbols(
+    " ".join([f"\dot{{\omega}}_{n}" if n else "\dot{\omega}" for n in s]))
+def omega(s):
+    idx = idx_s.index(s)
+    return _omega[idx]
+def omegad(s):
+    idx = idx_s.index(s)
+    return _omegad[idx]
+
+_T = symbols(
+    " ".join([f"T_{n}" if n else "T" for n in s]))
+_Td = symbols(
+    " ".join([f"\dot{{T}}_{n}" if n else "\dot{T}" for n in s]))
+def T(s):
+    idx = idx_s.index(s)
+    return _T[idx]
+def Td(s):
+    idx = idx_s.index(s)
+    return _Td[idx]
+
+_J = symbols("J_m J_\ell J_r J_L")
+def J(s):
+    idx = ["m", "l", "r", "L"].index(s)
+    return _J[idx]
+
+_k = symbols("k_1 k_2 k_3")
+def k(i):
+    return _k[i-1]
+
+_N = symbols("N_1 N_2 N_3 N_4")
+def N(i):
+    return _N[i-1]
+
+b = symbols("b")
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[50]:
+:END:
+** Basic Elements
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+basic_elements = [
+                  Eq(omegad("m"), T("m")/J("m")),
+                  Eq(omegad("l"), T("l")/J("l")),
+                  Eq(omegad("r"), T("r")/J("r")),
+                  Eq(omegad("L"), T("L")/J("L")),
+                  Eq(Td(1), k(1) * omega(1)),
+                  Eq(Td(2), k(2) * omega(2)),
+                  Eq(Td(3), k(3) * omega(3)),
+                  Eq(T("b"), b * omega("b")),
+                  ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[51]:
+:END:
+
+** Transformers
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+transfomers = [
+               Eq(omega("N2"), N(1)/N(2) * omega("N1")),
+               Eq(omega("N4"), N(3)/N(4) * omega("N3")),
+               Eq(T("N2"), N(2)/N(1) * T("N1")),
+               Eq(T("N4"), N(4)/N(3) * T("N3")),
+               ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[52]:
+:END:
+
+* Loop and Node Equations
+** Loop Equations
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+loop_equations = [
+                  Eq(omega(""), omega("m")),
+                  Eq(omega("m"), omega(1) + omega("N1")),
+                  Eq(omega("N2"), omega("l")),
+                  Eq(omega("l"), omega(2) + omega("r")),
+                  Eq(omega("l"), omega(2) + omega("r")),
+                  Eq(omega("r"), omega("N3")),
+                  Eq(omega("N3"), omega(3) + omega("L")),
+                  Eq(omega("L"), omega("b"))
+                  ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[53]:
+:END:
+
+** Node Equations
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+node_equations = [
+                  Eq(T(""), T("m") + T(1)),
+                  Eq(T(1), T("N1")),
+                  Eq(0, T("N2") + T("l") + T(2)),
+                  Eq(T(2), T("r") + T("N3")),
+                  Eq(0, T("N4") + T(3)),
+                  Eq(T(3), T("L") + T("b"))
+                  ]
+#+END_SRC
+
+
+#+RESULTS:
+:RESULTS:
+# Out[54]:
+:END:
+* State Variables
+Next we can define our state variables: 
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+x_1 = T(1)
+x_2 = omega("m")
+x_3 = T(2)
+x_4 = omega("l")
+x_5 = omega("r")
+x_6 = T(3)
+x_7 = omega("L")
+
+x = Matrix([
+            [x_1],
+            [x_2],
+            [x_3],
+            [x_4],
+            [x_5],
+            [x_6],
+            [x_7]
+            ])
+
+x_1d = Td(1)
+x_2d = omegad("m")
+x_3d = Td(2)
+x_4d = omegad("l")
+x_5d = omegad("r")
+x_6d = Td(3)
+x_7d = omegad("L")
+
+xd = Matrix([
+            [x_1d],
+            [x_2d],
+            [x_3d],
+            [x_4d],
+            [x_5d],
+            [x_6d],
+            [x_7d]
+            ])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[55]:
+:END:
+
+Currently, $\dot{\mathbf{x}}$ is not expressed in terms of state variables, so let's do that.
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+relations = basic_elements \
+  + transfomers \
+  + loop_equations \
+  + node_equations
+
+state_sym = set.union(x.free_symbols, {T("")})
+const_sym = set(
+    list(_J) + \
+    list(_k) + \
+    list(_N) + \
+    list((b,)))
+ok_sym = set.union(state_sym, const_sym)
+    
+def state_sym_score(exp):
+    exp_sym = exp.free_symbols
+    ss_score = 3*len(set.intersection(exp_sym, state_sym))
+    num_score = len(exp_sym) # Prefer longer expressions
+    return ss_score + num_score
+
+def reexpress(exp, prev_eqs=None):
+    if not prev_eqs:
+        prev_eqs = []
+    exp_sym = exp.free_symbols
+    non_state_sym = set.difference(exp_sym, ok_sym)
+    # Return the expression if it is already expressed
+    # in terms of state variables
+    if not non_state_sym:
+        return exp
+
+    relevant_eqs = []
+    substitutions = []
+    for s in non_state_sym:
+        # Find all relations with symbol of interest
+        for eq in relations:
+            # Don't reuse old substitutions
+            if eq in prev_eqs:
+                continue
+            if s in eq.free_symbols:
+                relevant_eqs.append(eq)
+        # Pick equation with most state symbols
+        rel_eq = max(relevant_eqs, key=state_sym_score)
+        prev_eqs.append(rel_eq)
+        rel_eq = solve(rel_eq, s)[0]
+        substitutions.append((s, rel_eq))
+    exp = exp.subs(substitutions)
+
+    return reexpress(exp, prev_eqs)
+
+for i in range(len(xd)):
+    xd[i] = reexpress(xd[i])
+
+print_var(xd, '\\dot{\\mathbf{x}}')
+
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\mathbf{x}}=\left[\begin{matrix}k_{1} \left(\omega_m - \frac{N_{2} \omega_\ell}{N_{1}}\right)\\\frac{1}{J_{m}} \left(T - T_{1}\right)\\k_{2} \left(\omega_\ell - \omega_r\right)\\\frac{1}{J_\ell} \left(- T_{2} - \frac{N_{2} T_{1}}{N_{1}}\right)\\\frac{1}{J_{r}} \left(\frac{N_{3} T_{3}}{N_{4}} + T_{2}\right)\\k_{3} \left(- \omega_L + \omega_r\right)\\\frac{1}{J_{L}} \left(T_{3} - \omega_L b\right)\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+Let's convert our $\dot{\mathbf{x}}$ into matrix form:
+#+BEGIN_SRC ipython :session :results raw drawer
+A, B = linear_eq_to_matrix(list(expand(xd)), list(x))
+B = B/T("")
+#+END_SRC
+
+Now our state equation is in the form:
+\begin{equation*}
+\dot{\mathbf{x}} = \mathbf{A}\mathbf{x} + \mathbf{B}u
+\end{equation*}
+Where:
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(A, '\\mathbf{A}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{A}=\left[\begin{matrix}0 & k_{1} & 0 & - \frac{N_{2} k_{1}}{N_{1}} & 0 & 0 & 0\\- \frac{1}{J_{m}} & 0 & 0 & 0 & 0 & 0 & 0\\0 & 0 & 0 & k_{2} & - k_{2} & 0 & 0\\- \frac{N_{2}}{J_\ell N_{1}} & 0 & - \frac{1}{J_\ell} & 0 & 0 & 0 & 0\\0 & 0 & \frac{1}{J_{r}} & 0 & 0 & \frac{N_{3}}{J_{r} N_{4}} & 0\\0 & 0 & 0 & 0 & k_{3} & 0 & - k_{3}\\0 & 0 & 0 & 0 & 0 & \frac{1}{J_{L}} & - \frac{b}{J_{L}}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(B, '\\mathbf{B}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{B}=\left[\begin{matrix}0\\- \frac{1}{J_{m}}\\0\\0\\0\\0\\0\end{matrix}\right]\end{equation*}
+#+END_EXPORT
