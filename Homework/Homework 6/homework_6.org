@@ -1,0 +1,107 @@
+#+TITLE: MECH 366 Homework 5
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage[scr]{rsfso}
+#+LATEX_HEADER: \newcommand{\laplace}{\mathscr{L}}
+#+LATEX_HEADER: \sisetup{per-mode=symbol}
+#+LATEX_HEADER: \sisetup{inter-unit-product=\cdot}
+#+LATEX_HEADER: \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+from sympy import *
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+    
+#+END_SRC
+
+Consider 2-DOF mass-spring-damper system in the figure below where $k$ [N/m] is the linear spring constant, $b_1$ [Ns/m] and $b_2$ [Ns/m] are viscous friction coefficients (between masses and ground), and $b_3$ [Ns/m] is the damping coefficent.
+#+ATTR_LATEX: :width 0.5\textwidth
+[[file:./q1.png]]
+
+
+The equations of motion are:
+\begin{align}
+m_1 \ddot{y}_1 &= f - k(y_1 - y_2) - b_1\dot{y}_1 - b_3(\dot{y}_1 - \dot{y}_2) \label{y1} \\
+m_2 \ddot{y}_2 &= -k(y_2 - y_1) - b_2\dot{y}_2 - b_3(\dot{y}_2 - \dot{y}_1) \label{y2}
+\end{align}
+
+Taking the Laplace transform of Equations \ref{y1} and \ref{y2}:
+\begin{align}
+m_1 Y_1 s^2 &= F - k(Y_1 - Y_2) - b_1 Y_1 s - b_3(Y_1 - Y_2)s \label{Y1} \\
+m_2 Y_2 s^2 &=   - k(Y_2 - Y_1) - b_2 Y_2 s - b_3(Y_2 - Y_1)s \label{Y2}  
+\end{align}
+
+Rearranging Equation \ref{Y1} to solve for $Y_1$:
+\begin{align}
+%m_1 s^2 Y_1 &= F - k(Y_1 - Y_2) - b_1 Y_1 s - b_3(Y_1 - Y_2)s \notag \\
+%m_1 s^2 Y_1 &= F + Y_1(-k - b_1 s - b_3 s) + Y_2(k + b_3 s) \notag \\
+%Y_1(m_1 s^2 + (b_1 + b_3)s + k) &= F + Y_2(b_3 s + k) \notag \\
+Y_1(s) &=
+\
+\underbrace{
+    \frac{1}{m_1 s^2 + (b_1 + b_3)s + k}
+}_{G_1(s)}
+F(s) +
+\underbrace{
+    \frac{b_3 s + k}{m_1 s^2 + (b_1 + b_3)s + k}
+}_{G_2(s)}
+Y_2(s)
+\end{align}
+
+Rearranging Equation \ref{Y2} to solve for $Y_2$:
+\begin{align}
+%m_2 Y_2 s^2 &=   - k(Y_2 - Y_1) - b_2 Y_2 s - b_3(Y_2 - Y_1)s \\
+%m_2 Y_2 s^2 &=   Y_1(k + b_3 s) + Y_2(-k - b_2 s - b_3 s) \\
+%Y_2(m_2 s^2 + (b_2 + b_3)s + k) &=   Y_1(k + b_3 s) \\
+Y_2(s) &=
+\underbrace{
+    \frac{k + b_3 s}{m_2 s^2 + (b_2 + b_3)s + k}
+}_{G_3(s)}
+Y_1(s)
+\end{align}
+
+Obtain the transfer function:
+* 
+from the input force $f$ to the output displacement $y_1$.
+\begin{align*}
+Y_1(s) &= G_1(s) F(s) + G_2(s) Y_2(s) \\
+Y_1(s) &= G_1(s) F(s) + G_2(s) G_3(s) Y_1(s) \\
+\frac{Y_1(s)}{F(s)} &= \frac{G_1(s)}{1 - G_2(s)G_3(s)} \numberthis \label{Y_1_F} \\
+\end{align*}
+* 
+from the input force $f$ to the output acceleration $\ddot{y_2}$.
+\begin{align*}
+Y_2(s) &= G_3(s)Y_1(s) \\
+Y_2(s) &= G_3(s)(G_1(s) F(s) + G_2(s) Y_2(s)) \\
+\frac{Y_2(s)}{F(s)} &= \frac{G_1(s) G_3(s)}{1 - G_2(s) G_3(s)} \numberthis \label{Y_2_F} \\
+\frac{Y_2(s) s^2}{F(s)} &= \frac{G_1(s) G_3(s) s^2}{1 - G_2(s) G_3(s)} \numberthis \\
+\end{align*}
+* 
+from the input force $f$ to the output (displacement difference) $y_1 - y_2$.
+
+From Equations \ref{Y_1_F} and \ref{Y_2_F}:
+\begin{align*}
+\frac{Y_1(s)}{F(s)} - \frac{Y_2(s)}{F(s)} &= \frac{Y_1(s) - Y_2(s)}{F(s)} = \frac{G_1(s)(1 - G_3(s))}{1 - G_2(s)G_3(s)} \numberthis
+\end{align*}
+* 
+from the input displacement $y_2$ to the output displacement $y_1$
+\begin{align*}
+Y_2(s) &= G_3(s) Y_1(s) \\
+\frac{Y_1(s)}{Y_2(s)} &= \frac{1}{G_3(s)} \numberthis
+\end{align*}
+* 
+from the input displacement $y_1$ to the output displacement $y_2$
+\begin{align*}
+Y_2(s) &= G_3(s) Y_1(s) \\
+\frac{Y_2(s)}{Y_1(s)} &= G_3(s) \numberthis
+\end{align*}
