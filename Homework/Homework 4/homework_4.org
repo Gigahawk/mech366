@@ -1,0 +1,630 @@
+#+TITLE: MECH 366 Homework 4
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \sisetup{per-mode=symbol}
+#+LATEX_HEADER: \sisetup{inter-unit-product=\cdot}
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+from sympy import *
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+    
+#+END_SRC
+
+For each of the following systems, derive the state-space model by using the linear graph.
+
+* 
+Two-tank system connected with a transformer.
+The notations are explained in the following table.
+What are not shown in the figure are assumed to be negligible.
+The inputs are the volume flow rates $Q_1$ and $Q_2$ 
+$\left[\si{\meter^3\per\second}\right]$,
+and the outputs are the heights $h_1$ and  $h_2$ $[\si{\meter}]$
+#+ATTR_LATEX: :align c c l
+| Notation | Unit                                      | Meaning           |
+|----------+-------------------------------------------+-------------------|
+| $C$      | [\si{\meter^5\per\newton}]                | Fluid capacitance |
+| $I$      | [\si{\newton\second\squared\per\meter^5}] | Fluid inertance   |
+| $R$      | [\si{\newton\second\per\meter^5}]         | Fluid resistance  |
+| $A$      | [\si{\meter\squared}]                     | Section area      |
+| $P_a$    | [\si{\newton\per\meter\squared}]          | Ambient pressure  |
+
+[[file:q1.png]]
+
+** Linear Graph
+[[file:q1_lingraph.svg]]
+
+** State Variables
+From the linear graph, we get our state variables:
+\begin{equation*}
+\mathbf{x} = 
+\begin{bmatrix}
+x_1 \\ x_2 \\ x_3 
+\end{bmatrix}
+:=
+\begin{bmatrix}
+P_{C_1} \\ Q_I \\ P_{C_2}
+\end{bmatrix}
+\end{equation*}
+** Constitutive Equations
+We can now write out our constitutive equations:
+First let's start by defining our symbols
+#+BEGIN_SRC ipython :session :results raw drawer :exports code
+s = [1, 2,
+     "R", "I",
+     "{C_1}", "{C_2}",
+     "{A_1}", "{A_2}"]
+idx_s = [1, 2,
+         "R", "I",
+         "C1", "C2",
+         "A1", "A2"]
+
+_P = symbols(
+    " ".join([f"P_{n}" if n else "P" for n in s]))
+_Pd = symbols(
+    " ".join([f"\dot{{P}}_{n}" if n else "\dot{P}" for n in s]))
+def P(s):
+    idx = idx_s.index(s)
+    return _P[idx]
+def Pd(s):
+    idx = idx_s.index(s)
+    return _Pd[idx]
+
+_Q = symbols(
+    " ".join([f"Q_{n}" if n else "Q" for n in s]))
+_Qd = symbols(
+    " ".join([f"\dot{{Q}}_{n}" if n else "\dot{Q}" for n in s]))
+def Q(s):
+    idx = idx_s.index(s)
+    return _Q[idx]
+def Qd(s):
+    idx = idx_s.index(s)
+    return _Qd[idx]
+R = symbols("R")
+I = symbols("I")
+_A = symbols("A_1 A_2")
+def A(i):
+    return _A[i-1]
+_C = symbols("C_1 C_2")
+def C(i):
+    return _C[i-1]
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[6]:
+:END:
+
+*** Basic Elements
+#+BEGIN_SRC ipython :session :results raw drawer
+basic_elements = [
+                  Eq(C(1)*Pd("C1"), Q("C1")),
+                  Eq(C(2)*Pd("C2"), Q("C2")),
+                  Eq(I*Qd("I"), P("I")),
+                  Eq(R*Q("R"), P("R"))
+                  ]
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[60]:
+:END:
+*** Transformers
+#+BEGIN_SRC ipython :session :results raw drawer
+r = A(1)/A(2)
+transformers = [
+                Eq(P("A2"), r*P("A1")),
+                Eq(Q("A2"), -1/r*Q("A1"))
+                ]
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[61]:
+:END:
+*** Loop and Node Equations
+**** Loop Equations
+#+BEGIN_SRC ipython :session :results raw drawer
+loop_equations = [
+                  Eq(P(1), P("C1")),
+                  Eq(P("C1"), P("R") +  P("I") +  P("A1")),
+                  Eq(P("A2"), P("C2")),
+                  Eq(P("C2"), P(2))
+                  ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[83]:
+:END:
+**** Node Equations
+#+BEGIN_SRC ipython :session :results raw drawer
+node_equations = [
+                  Eq(Q(1), Q("C1") + Q("R")),
+                  Eq(Q("R"), Q("I")),
+                  Eq(Q("I"), Q("A1")),
+                  Eq(Q(2), Q("A2") + Q("C2"))
+                  ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[84]:
+:END:
+** State Variables
+Next we can define our state variables: 
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+x_1 = P("C1")
+x_2 = Q("I")
+x_3 = P("C2")
+x = Matrix([
+            [x_1],
+            [x_2],
+            [x_3]
+            ])
+
+x_1d = Pd("C1")
+x_2d = Qd("I")
+x_3d = Pd("C2")
+xd = Matrix([
+            [x_1d],
+            [x_2d],
+            [x_3d]
+            ])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[116]:
+:END:
+
+Currently, $\dot{\mathbf{x}}$ is not expressed in terms of state variables, so let's do that.
+
+#+BEGIN_SRC ipython :session :results output  latex :exports both
+relations = basic_elements \
+  + transformers \
+  + loop_equations \
+  + node_equations
+
+state_sym = set.union(x.free_symbols, {Q(1), Q(2)})
+const_sym = set(
+    list(_C) + \
+    list(_A) + \
+    list((R, I)))
+ok_sym = set.union(state_sym, const_sym)
+    
+def state_sym_score(target_sym):
+    def _state_sym_score(exp):
+        exp_sym = exp.free_symbols
+        #ss_score = len(set.intersection(exp_sym, {target_sym}))
+        #print("ss_score")
+        #print(exp)
+        #print(ss_score)
+        #ss_score *= 10
+        #ss_score += 10*len(set.intersection(exp_sym, state_sym))
+        ss_score = 10*len(set.intersection(exp_sym, x.free_symbols))
+        num_score = len(exp_sym) # Prefer longer expressions
+
+        # Score is zero if it doesn't contain the symbol we're trying to swap
+        #print(exp)
+        if not target_sym in exp_sym:
+            #print("Target sym not in exp")
+            return 0
+        # Score is zero if it will introduce a derivative
+        if (not target_sym in list(_Pd) + list(_Qd)
+            and len(set.intersection(
+                exp_sym, set(list(_Pd) + \
+                             list(_Qd))))):
+            #print("Will introduce derivative")
+            return 0
+        return ss_score + num_score
+    return _state_sym_score
+
+def reexpress(exp, prev_eqs=None):
+    #print("REEXPRESS")
+    #print(exp)
+
+    if not prev_eqs:
+        prev_eqs = []
+    exp_sym = exp.free_symbols
+    non_state_sym = set.difference(exp_sym, ok_sym)
+    #print(non_state_sym)
+    # Return the expression if it is already expressed
+    # in terms of state variables
+    if not non_state_sym:
+        return exp
+
+    relevant_eqs = []
+    substitutions = []
+    for s in non_state_sym:
+        # Find all relations with symbol of interest
+        for eq in relations:
+            # Don't reuse old substitutions
+            if eq in prev_eqs:
+                continue
+            if s in eq.free_symbols:
+                relevant_eqs.append(eq)
+        # Pick equation with most state symbols
+        #print("relevent eqs")
+        #print(relevant_eqs)
+        try:
+            rel_eq = max(relevant_eqs, key=state_sym_score(s))
+        except:
+            #print("No relative eqs")
+            return exp
+        prev_eqs.append(rel_eq)
+        #print(rel_eq)
+        #print(s)
+        try:
+            rel_eq = solve(rel_eq, s)[0]
+        except:
+            #print("variable not in rel_eq")
+            continue
+
+        substitutions.append((s, rel_eq))
+    exp = exp.subs(substitutions)
+
+    return reexpress(exp, prev_eqs)
+
+for i in range(len(xd)):
+    #print("X")
+    #print(i)
+    #print(xd[i])
+    xd[i] = reexpress(xd[i])
+
+print_var(xd, '\\dot{\\mathbf{x}}')
+
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\mathbf{x}}=\left[\begin{matrix}\frac{1}{C_{1}} \left(Q_{1} - Q_{I}\right)\\\frac{1}{I} \left(P_{C_1} - Q_{I} R - \frac{A_{2} P_{C_2}}{A_{1}}\right)\\\frac{1}{C_{2}} \left(Q_{2} + \frac{A_{2} Q_{I}}{A_{1}}\right)\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+Let's convert our $\dot{\mathbf{x}}$ into matrix form:
+#+BEGIN_SRC ipython :session :results raw drawer
+A, b = linear_eq_to_matrix(list(expand(xd)), list(x))
+B, a = linear_eq_to_matrix(list(expand(xd)), [Q(1), Q(2)])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[195]:
+:END:
+
+Now our state equation is in the form:
+\begin{equation*}
+\dot{\mathbf{x}} = \mathbf{A}\mathbf{x} + \mathbf{B}u
+\end{equation*}
+Where:
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(A, '\\mathbf{A}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{A}=\left[\begin{matrix}0 & - \frac{1}{C_{1}} & 0\\\frac{1}{I} & - \frac{R}{I} & - \frac{A_{2}}{A_{1} I}\\0 & \frac{A_{2}}{A_{1} C_{2}} & 0\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(B, '\\mathbf{B}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{B}=\left[\begin{matrix}\frac{1}{C_{1}} & 0\\0 & 0\\0 & \frac{1}{C_{2}}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+* 
+Semiconductor material in a heating chamber
+[[file:q2.png]]
+
+- *Two input* are the heat transfer rate into the wall $Q_i$ (control input), and the ambient temperature $T_o$ (disturbance input).
+- *One output* is the temperature $T_s$.
+- Notations (see the figure)
+  #+ATTR_LATEX: :align c | c c c
+  |                    | Mass  | Specific heat | Temperature |
+  |--------------------+-------+---------------+-------------|
+  | Gas in the chamber | $m_c$ | $c_c$         | $T_c$       |
+  | Silicon            | $m_s$ | $c_s$         | $T_s$       |
+  | Wall               | $m_w$ | $c_w$         | $T_w$       |
+  | Ambient            |       |               | $T_o$       |
+  - $h_s$ and $A_s$: Convective heat transfer coefficient at the interface of silicon and gas inside the chamber, and the effective surface area
+  - $h_i$ and $A_i$: Convective heat transfer coefficient at the inside surface of the chamber wall, and the effective surface area
+  - $h_o$ and $A_o$: Convective heat transfer coefficient at the outside surface of the chamber wall, and the effective surface area
+
+[[file:q2_lingraph.svg]]
+  
+** State Variables
+From the linear graph, we get our state variables:
+\begin{equation*}
+\mathbf{x} = 
+\begin{bmatrix}
+x_1 \\ x_2 \\ x_3 
+\end{bmatrix}
+:=
+\begin{bmatrix}
+T_w \\ T_c \\ T_s
+\end{bmatrix}
+\end{equation*}
+** Constitutive Equations
+We can now write out our constitutive equations:
+First let's start by defining our symbols
+#+BEGIN_SRC ipython :session :results raw drawer :exports code
+idx_s = ["o", "i",
+     "w", "c", "s",
+     "wo", "wc", "cs",
+     "Rwo", "Rwc", "Rcs",
+     "Cw", "Cc", "Cs"]
+     
+s = ["o", "i",
+         "w", "c", "s",
+         "{wo}", "{wc}", "{cs}",
+         "{R_{wo}}", "{R_{wc}}", "R_{cs}}",
+         "{Cw}", "{Cc}", "{Cs}"]
+
+_T = symbols(
+    " ".join([f"T_{n}" if n else "T" for n in s]))
+_Td = symbols(
+    " ".join([f"\dot{{T}}_{n}" if n else "\dot{T}" for n in s]))
+def T(s):
+    idx = idx_s.index(s)
+    return _T[idx]
+def Td(s):
+    idx = idx_s.index(s)
+    return _Td[idx]
+
+_Q = symbols(
+    " ".join([f"Q_{n}" if n else "Q" for n in s]))
+_Qd = symbols(
+    " ".join([f"\dot{{Q}}_{n}" if n else "\dot{Q}" for n in s]))
+def Q(s):
+    idx = idx_s.index(s)
+    return _Q[idx]
+def Qd(s):
+    idx = idx_s.index(s)
+    return _Qd[idx]
+_R = symbols(
+    " ".join([f"R_{n}" if n else "R" for n in s]))
+def R(s):
+    idx = idx_s.index(s)
+    return _R[idx]
+_C = symbols(
+    " ".join([f"C_{n}" if n else "C" for n in s]))
+def C(s):
+    idx = idx_s.index(s)
+    return _C[idx]
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[212]:
+:END:
+
+*** Basic Elements
+#+BEGIN_SRC ipython :session :results raw drawer
+basic_elements = [
+                  Eq(R("wo")*Q("Rwo"), T("w") - T("o")),
+                  Eq(R("wc")*Q("Rwc"), T("w") - T("c")),
+                  Eq(R("cs")*Q("Rcs"), T("c") - T("s")),
+                  Eq(C("w")*Td("w"), Q("Cw")),
+                  Eq(C("c")*Td("c"), Q("Cc")),
+                  Eq(C("s")*Td("s"), Q("Cs")),
+                  ]
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[216]:
+:END:
+*** Transformers
+#+BEGIN_SRC ipython :session :results raw drawer
+transformers = []
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[217]:
+:END:
+*** Loop and Node Equations
+**** Loop Equations
+#+BEGIN_SRC ipython :session :results raw drawer
+# Loop equations unnecessary
+loop_equations = []
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[83]:
+:END:
+**** Node Equations
+#+BEGIN_SRC ipython :session :results raw drawer
+node_equations = [
+                  Eq(Q("i"), Q("Rwo") + Q("Cw") + Q("Rwc")),
+                  Eq(Q("Rwc"), Q("Cc") + Q("Rcs")),
+                  Eq(Q("Rcs"), Q("Cs")),
+                  ]
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[219]:
+:END:
+** State Variables
+Next we can define our state variables: 
+#+BEGIN_SRC ipython :session :results raw drawer :tangle yes
+x_1 = T("w")
+x_2 = T("c")
+x_3 = T("s")
+x = Matrix([
+            [x_1],
+            [x_2],
+            [x_3]
+            ])
+
+x_1d = Td("w")
+x_2d = Td("c")
+x_3d = Td("s")
+xd = Matrix([
+            [x_1d],
+            [x_2d],
+            [x_3d]
+            ])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[220]:
+:END:
+
+Currently, $\dot{\mathbf{x}}$ is not expressed in terms of state variables, so let's do that.
+
+#+BEGIN_SRC ipython :session :results output  latex :exports both
+relations = basic_elements \
+  + transformers \
+  + loop_equations \
+  + node_equations
+
+state_sym = set.union(x.free_symbols, {T("o"), Q("i")})
+const_sym = set(
+    list(_R) + \
+    list(_C))
+ok_sym = set.union(state_sym, const_sym)
+    
+def state_sym_score(target_sym):
+    def _state_sym_score(exp):
+        exp_sym = exp.free_symbols
+        #ss_score = len(set.intersection(exp_sym, {target_sym}))
+        #print("ss_score")
+        #print(exp)
+        #print(ss_score)
+        #ss_score *= 10
+        #ss_score += 10*len(set.intersection(exp_sym, state_sym))
+        ss_score = 10*len(set.intersection(exp_sym, x.free_symbols))
+        num_score = len(exp_sym) # Prefer longer expressions
+
+        # Score is zero if it doesn't contain the symbol we're trying to swap
+        #print(exp)
+        if not target_sym in exp_sym:
+            #print("Target sym not in exp")
+            return 0
+        # Score is zero if it will introduce a derivative
+        if (not target_sym in list(_Td) + list(_Qd)
+            and len(set.intersection(
+                exp_sym, set(list(_Td) + \
+                             list(_Qd))))):
+            #print("Will introduce derivative")
+            return 0
+        return ss_score + num_score
+    return _state_sym_score
+
+def reexpress(exp, prev_eqs=None):
+    #print("REEXPRESS")
+    #print(exp)
+
+    if not prev_eqs:
+        prev_eqs = []
+    exp_sym = exp.free_symbols
+    non_state_sym = set.difference(exp_sym, ok_sym)
+    #print(non_state_sym)
+    # Return the expression if it is already expressed
+    # in terms of state variables
+    if not non_state_sym:
+        return exp
+
+    relevant_eqs = []
+    substitutions = []
+    for s in non_state_sym:
+        # Find all relations with symbol of interest
+        for eq in relations:
+            # Don't reuse old substitutions
+            if eq in prev_eqs:
+                continue
+            if s in eq.free_symbols:
+                relevant_eqs.append(eq)
+        # Pick equation with most state symbols
+        #print("relevent eqs")
+        #print(relevant_eqs)
+        try:
+            rel_eq = max(relevant_eqs, key=state_sym_score(s))
+        except:
+            #print("No relative eqs")
+            return exp
+        prev_eqs.append(rel_eq)
+        #print(rel_eq)
+        #print(s)
+        try:
+            rel_eq = solve(rel_eq, s)[0]
+        except:
+            #print("variable not in rel_eq")
+            continue
+
+        substitutions.append((s, rel_eq))
+    exp = exp.subs(substitutions)
+
+    return reexpress(exp, prev_eqs)
+
+for i in range(len(xd)):
+    #print("X")
+    #print(i)
+    #print(xd[i])
+    xd[i] = reexpress(xd[i])
+
+print_var(xd, '\\dot{\\mathbf{x}}')
+
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\mathbf{x}}=\left[\begin{matrix}\frac{1}{C_{w}} \left(Q_{i} - \frac{1}{R_{wo}} \left(- T_{o} + T_{w}\right) - \frac{1}{R_{wc}} \left(- T_{c} + T_{w}\right)\right)\\\frac{1}{C_{c}} \left(\frac{1}{R_{wc}} \left(- T_{c} + T_{w}\right) - \frac{1}{R_{cs}} \left(T_{c} - T_{s}\right)\right)\\\frac{T_{c} - T_{s}}{C_{s} R_{cs}}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+Let's convert our $\dot{\mathbf{x}}$ into matrix form:
+#+BEGIN_SRC ipython :session :results raw drawer
+A, b = linear_eq_to_matrix(list(expand(xd)), list(x))
+B, a = linear_eq_to_matrix(list(expand(xd)), [Q("i"), T("o")])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[222]:
+:END:
+
+Now our state equation is in the form:
+\begin{equation*}
+\dot{\mathbf{x}} = \mathbf{A}\mathbf{x} + \mathbf{B}u
+\end{equation*}
+Where:
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(A, '\\mathbf{A}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{A}=\left[\begin{matrix}- \frac{1}{C_{w} R_{wo}} - \frac{1}{C_{w} R_{wc}} & \frac{1}{C_{w} R_{wc}} & 0\\\frac{1}{C_{c} R_{wc}} & - \frac{1}{C_{c} R_{wc}} - \frac{1}{C_{c} R_{cs}} & \frac{1}{C_{c} R_{cs}}\\0 & \frac{1}{C_{s} R_{cs}} & - \frac{1}{C_{s} R_{cs}}\end{matrix}\right]\end{equation*}
+#+END_EXPORT
+
+#+BEGIN_SRC ipython :session :results output latex :exports results
+print_var(B, '\\mathbf{B}')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\mathbf{B}=\left[\begin{matrix}\frac{1}{C_{w}} & \frac{1}{C_{w} R_{wo}}\\0 & 0\\0 & 0\end{matrix}\right]\end{equation*}
+#+END_EXPORT
