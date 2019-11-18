@@ -1,0 +1,122 @@
+#+TITLE: MECH 366 Homework 5
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage[scr]{rsfso}
+#+LATEX_HEADER: \newcommand{\laplace}{\mathscr{L}}
+#+LATEX_HEADER: \sisetup{per-mode=symbol}
+#+LATEX_HEADER: \sisetup{inter-unit-product=\cdot}
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+from sympy import *
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+    
+#+END_SRC
+
+Consider the following ordinary differential equation (ODE):
+\begin{equation*}
+y^{(3)}(t) + 2y^{(2)}(t) + y^{(1)}(t) = r(t)
+\end{equation*}
+with zero initial conditions $y(0) = y^{(1)}(0) = y^{(2)}(0) = 0$.
+Here, $y^{(k)}(t)$ denotes the \(k\)-th derivative of $y(t)$.
+
+* 
+Assume that $r(t) = \delta(t)$ (i.e., unit impulse function).
+** 
+By using the Laplace transform, solve the ODE (i.e., obtain $y(t)$).
+
+First let's take the Laplace transform and solve for $Y(s)$:
+\begin{align*}
+\laplace\left\{y^{(3)}(t) + 2y^{(2)}(t) + y^{(1)}(t)\right\}
+&= \laplace\{r(t)\} \\
+s^3Y(s) - \sum_{i=1}^{3}s^{(3-i)}f^{(i-1)}(0) 
++ 2\left(
+    s^2Y(s) - sy(0) - y^{(1)}(0)
+\right)
++ sY(s) - y(0)
+&= R(s) \\
+s^3Y(s) + 2s^2Y(s) + sY(s) &= 1 \\
+\\
+Y(s) &= \frac{1}{s^3 + 2s^2 + s} \\
+&= \frac{1}{s(s + 1)^2} \\
+\end{align*}
+
+Now let's do the partial fraction expansion of $Y(s)$
+\begin{align*}
+Y(s) = \frac{1}{s(s + 1)^2}
+&= \frac{A}{s} + \frac{B}{s + 1} + \frac{C}{(s + 1)^2} \\
+1 &= A(s + 1)^2 + Bs(s + 1) + Cs \\
+1 &= A(s^2 + 2s + 1) + B(s^2 + s) + Cs \\
+1 &= s^2(A + B) + s(2A + B + C) + A \\
+A &= 1 \\
+B &= -1 \\
+C &= -1 \\
+\\
+Y(s) &= \frac{1}{s} - \frac{1}{s + 1} - \frac{1}{(s + 1)^2} \\
+\end{align*}
+
+Now we can take the inverse Laplace transform of $Y(s)$ to find $y(t)$:
+\begin{align*}
+\laplace^{-1}\left\{Y(s)\right\}
+&= \laplace^{-1}\left\{\frac{1}{s} - \frac{1}{s + 1} - \frac{1}{(s + 1)^2}\right\} \\
+y(t) &= u(t) - e^{-t} - e^{-t}t \\
+&= 1 - e^{-t} - e^{-t}t, t > 0
+\end{align*}
+** 
+By using the final value theorem, obtain the final value $\lim_{t\to\infty}y(t)$.
+(You should verify the applicability of the final value theorem.)
+
+First, let's check the applicability of the final value theorem:
+\begin{align*}
+Y(s) &= \frac{1}{s(s + 1)^2} \\
+\end{align*}
+$Y(s)$ has one pole at $0$, and two poles at $-1$, therefore the final value theorem holds.
+
+\begin{align*}
+\lim_{t\to\infty}y(t) &= \lim_{s\to 0} sY(s) \\
+&= \lim_{s\to 0} \frac{1}{(s + 1)^2} \\
+&= 1
+\end{align*}
+
+* 
+Next, assume that $r(t)$ is the function given in the figure below.
+Note that this is an approximation of the unit impulse function.
+#+ATTR_LATEX: :width 0.5\textwidth
+[[file:q2.png]]
+By using the final value theorem, obtain the final value $\lim_{t\to\infty}y(t)$.
+(In this question, you can assume (i.e., you do not need to check) the applicability of the final value theorem.)
+
+From the figure:
+\begin{equation*}
+r(t) = 2\left(u(t) - u(t - 1/2)\right)
+\end{equation*}
+
+First let's take the Laplace transform and solve for $Y(s)$:
+\begin{align*}
+\laplace\left\{y^{(3)}(t) + 2y^{(2)}(t) + y^{(1)}(t)\right\}
+&= \laplace\{r(t)\} \\
+s^3Y(s) + 2s^2Y(s) + sY(s)
+&= 2\left(\frac{1}{s} - \frac{e^{-s/2}}{s}\right) \\
+&= 2\left(\frac{1 - e^{-s/2}}{s}\right) \\
+\\
+Y(s) &= \frac{2 - 2e^{-s/2}}{s^2\left(s + 1\right)^2} \\
+\end{align*}
+
+Now let's apply the final value theorem:
+\begin{align*}
+\lim_{t\to\infty}y(t) &= \lim_{s\to 0} sY(s) \\
+&= \lim_{s\to 0} \frac{2 - 2e^{-s/2}}{s\left(s + 1\right)^2} \\
+&= \lim_{s\to 0} \frac{\frac{d}{ds}\left(2 - 2e^{-s/2}\right)}{\frac{d}{ds}\left(s\left(s + 1\right)^2\right)} \\
+&= \lim_{s\to 0} \frac{e^{-s/2}}{3s^2 + 4s + 1} \\
+&= 1
+\end{align*}
