@@ -1,0 +1,13 @@
+**/*~
+**/*#
+**/*.pdf
+**/*.log
+**/*.tex
+**/obipy-resources
+**/svg-inkscape
+**/_minted*
+**/ltximg*
+
+**/*.slxc
+**/*.autosave
+**/slprj*
