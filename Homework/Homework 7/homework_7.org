@@ -1,0 +1,162 @@
+#+TITLE: MECH 366 Homework 7
+#+AUTHOR: Jasper Chan - 37467164
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage[scr]{rsfso}
+#+LATEX_HEADER: \newcommand{\laplace}{\mathscr{L}}
+#+LATEX_HEADER: \sisetup{per-mode=symbol}
+#+LATEX_HEADER: \sisetup{inter-unit-product=\cdot}
+#+LATEX_HEADER: \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+#+BEGIN_SRC ipython :session :results silent :exports none
+%matplotlib inline
+%config InlineBackend.figure_format = 'svg'
+
+import numpy as np
+
+from sympy import *
+init_printing(use_latex=True)
+
+def print_var(expr, var=None, mode='equation*', scale_width=False):
+    output = latex(expr, mode='plain')
+    if var:
+        output = str(var) + "=" + output
+    if scale_width:
+        output = "\\resizebox{\\textwidth}{!}{$" + output + "$}"
+    output = f"\\begin{{{mode}}}" + output + f"\\end{{{mode}}}"
+    print(output)
+#+END_SRC
+
+* 
+For an unkown system suppose that we applied a step input with _amplitude 10_ (i.e. $10u(t)$), and that the response was obtained as shownin Slide 16 of Lecture 17.
+Derive (roughly) the transfer function.
+Explain the derivation process in detail.
+
+[[file:./q1.svg]]
+
+The transfer function $G(s)$ of the second order system is defined as:
+\begin{equation*}
+G(s) := \frac{Y(s)}{F(s)} =
+\frac{K\omega_n^2}{s^2 + 2\zeta\omega_ns + \omega_n^2}
+\end{equation*}
+
+First, let's find $\omega_d$:
+The first positive peak occurs somewhere around \SI{3.2}{\second}, and the second peak around \SI{9.6}{\second}:
+#+BEGIN_SRC ipython :session :results output latex :exports both
+T_1 = 3.2
+T_2 = 9.6
+T_d = T_2 - T_1
+f_d = 1/T_d
+omega_d = 2*np.pi*f_d
+print_var(f"{omega_d:.3f}", '\\omega_d')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\omega_d}}=0.982\end{equation*}
+#+END_EXPORT
+
+We can also find $\zeta$ using $\delta$ via the log decrement method.
+The first peak $y(3.2) \approx 1.53$, and the second peak $y(9.6) \approx 1.14$.
+The steady state value is 1.
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+y_inf = 1
+y_1 = 1.53 - y_inf
+y_2 = 1.14 - y_inf
+
+delta = np.log(y_1/y_2)
+zeta = 1/np.sqrt(1 + (2*np.pi/delta)**2)
+print_var(f"{zeta:.3f}", '\\zeta')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\zeta}}=0.207\end{equation*}
+#+END_EXPORT
+
+With $\zeta$ and $\omega_d$, we can find $\omega_n$.
+#+BEGIN_SRC ipython :session :results output latex :exports both
+omega_n = omega_d/np.sqrt(1 - zeta**2)
+print_var(f"{omega_n:.3f}", '\\omega_n')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\dot{\omega_n}}=1.004\end{equation*}
+#+END_EXPORT
+
+Since our input is a step function with amplitude 10 and our steady state output is 1, our gain $K$ is $1/10$
+
+We can confirm that our step function is correct by plugging it into Simulink:
+#+ATTR_LATEX: :width 0.8\textwidth
+[[file:./q1_model.svg]]
+
+#+ATTR_LATEX: :width 0.8\textwidth
+[[file:./q1_sim.svg]]
+
+* 
+Let us consider the accelerometer in Slides 20-22 in Lecture 14.
+In this question, you do _not_ need to rederive the transfer function from the force $F(s)$ to the displacement $Y(s)$ of the proof mass; just use
+\begin{equation*}
+G(s) := -\frac{1}{M} \cdot
+\frac{1}{s^2 + (b/m)s + (k/m)}
+\end{equation*}
+
+For a vehicle mass $M = \SI{2000}{\kilo\gram}$,
+and a proof-mass $m = \SI{0.002}{\kilo\gram}$, 
+design the spring constant $k [\si{\newton\per\meter}]$ and damping constant $b [\si{\newton\second\per\meter}]$, to meet the following requirements.
+For a unit step force,
+- *Requirement 1:* The precent overshoot (in this case, undershoot) is about 5%.
+  (Hint: This corresponds to about \SI{45}{\degree} of the pole locations.)
+- *Requirement 2:* the 2% settling time is about \SI{10}{\milli\second}
+  (fast enough, so that the airbag can inflate promptly after the collision).
+
+From the hint, $\zeta = \cos(\theta) = \cos\left(\SI{45}{\degree}\right) = \sqrt{2}/2$.
+We want a settling time $T_s \approx \SI{10}{\milli\second}$.
+Solving for $\omega_n$:
+\begin{align*}
+T_s &\approx \frac{4}{\zeta \omega_n} \\
+\omega_n &\approx \frac{4}{\zeta T_s}
+\end{align*}
+#+BEGIN_SRC ipython :session :results output latex :exports both
+T_s = 0.01 #s
+zeta = np.cos(np.pi/4)
+
+omega_n = 4/(zeta*T_s)
+print_var(f"{omega_n:.3f}", '\\omega_n')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}\omega_n=565.685\end{equation*}
+#+END_EXPORT
+
+With $\omega_n$ we can solve for $k$ and $b$:
+\begin{align*}
+\omega_n^2 &= \frac{k}{m} \\
+k &= m\omega_n^2
+\end{align*}
+#+BEGIN_SRC ipython :session :results output latex :exports both
+m = 0.002 # kg
+k = m*omega_n**2 # N/m
+print_var(f"{k:.3f}", 'k')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}k=640.000\end{equation*}
+#+END_EXPORT
+
+\begin{align*}
+2\zeta\omega_n &= \frac{b}{m} \\
+b &= 2\zeta \omega_n m
+\end{align*}
+
+#+BEGIN_SRC ipython :session :results output latex :exports both
+b = 2*zeta*omega_n*m # Ns/m
+print_var(f"{b:.3f}", 'b')
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_EXPORT latex
+\begin{equation*}b=1.600\end{equation*}
+#+END_EXPORT
